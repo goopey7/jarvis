@@ -108,17 +108,20 @@ fn parse_response(response: String) -> String
 	let data = get_penultimate_data(response);
 	match data
 	{
-		Some(data) => data.to_string(),
+		Some(data) =>
+		{
+			let json = serde_json::from_str::<Value>(data.as_str()).unwrap();
+			let response = json["message"]["content"]["parts"][0].to_string();
+			response[1..response.len() - 1].to_string()
+		}
 		None => "No response".to_string(),
 	}
-
-	//let response: Value = serde_json::from_str(data)?;
 }
 
 pub fn run(_options: &[CommandDataOption]) -> String
 {
 	let message = _options[0].value.as_ref().unwrap().as_str().unwrap();
 	//let response = get_response(message).await.unwrap();
-	format!("Response: {}", parse_response(message.to_string()).replace("\\n","\n"))
+	format!("{}", parse_response(message.to_string()).replace("\\n","\n"))
 }
 
