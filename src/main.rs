@@ -2,10 +2,13 @@ mod commands;
 use std::env;
 
 use serenity::async_trait;
+use serenity::builder::CreateInteractionResponseFollowup;
 //use serenity::model::application::command::Command;
 use serenity::model::application::interaction::{Interaction, InteractionResponseType};
 use serenity::model::gateway::Ready;
 use serenity::model::id::GuildId;
+use serenity::model::prelude::ChannelId;
+use serenity::model::prelude::application_command::ApplicationCommandInteraction;
 use serenity::prelude::*;
 
 struct Handler;
@@ -17,7 +20,7 @@ impl EventHandler for Handler
 	{
 		if let Interaction::ApplicationCommand(command) = interaction
 		{
-			println!("Received command interaction: {:#?}", command);
+			//println!("Received command interaction: {:#?}", command);
 
 			let content = match command.data.name.as_str()
 			{
@@ -25,7 +28,19 @@ impl EventHandler for Handler
 				"numberinput" => commands::numberinput::run(&command.data.options),
 				"update-cookie" => commands::update_cookie::run(&command.data.options),
 				"update-authentication" => commands::update_authentication::run(&command.data.options),
-				"gpt" => commands::gpt::run(&command.data.options),
+				"gpt" =>
+				{
+					command.defer(&ctx.http).await.unwrap();
+					let typing = ctx.http.start_typing(command.channel_id.0).unwrap();
+					let response = commands::gpt::run(&command.data.options).await;
+					command.create_followup_message(&ctx.http, |message|
+						{
+							message.content(response);
+							message
+						}).await.unwrap();
+					typing.stop().unwrap();
+					"".to_string()
+				},
 				//"id" => commands::id::run(&command.data.options),
 				//"attachmentinput" => commands::attachmentinput::run(&command.data.options),
 				_ => "not implemented :(".to_string(),
@@ -39,14 +54,14 @@ impl EventHandler for Handler
 				})
 				.await
 			{
-				println!("Cannot respond to slash command: {}", why);
+				//println!("Cannot respond to slash command: {}", why);
 			}
 		}
 	}
 
 	async fn ready(&self, ctx: Context, ready: Ready)
 	{
-		println!("{} is connected!", ready.user.name);
+		//println!("{} is connected!", ready.user.name);
 
 		let guild_id = GuildId
 		(
@@ -74,11 +89,11 @@ impl EventHandler for Handler
 		{
 			Ok(commands) =>
 			{
-				println!("Slash commands registered: {:#?}", commands);
+				//println!("Slash commands registered: {:#?}", commands);
 			}
 			Err(why) =>
 			{
-				println!("Cannot register slash commands: {}", why);
+				//println!("Cannot register slash commands: {}", why);
 			}
 		}
 
@@ -103,7 +118,7 @@ async fn main()
 	// exponential backoff until it reconnects.
 	if let Err(why) = client.start().await
 	{
-		println!("Client error: {:?}", why);
+		//println!("Client error: {:?}", why);
 	}
 }
 
