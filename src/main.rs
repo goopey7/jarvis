@@ -8,29 +8,6 @@ use serenity::model::gateway::Ready;
 use serenity::model::id::GuildId;
 use serenity::prelude::*;
 
-use std::fs::File;
-use std::io::prelude::*;
-
-fn get_auth_from_file() -> String
-{
-	let mut file = File::open("auth.txt").expect("Unable to open auth.txt");
-	let mut contents = String::new();
-	file.read_to_string(&mut contents)
-		.expect("Unable to read auth.txt");
-
-	contents.trim().to_string()
-}
-
-fn get_cookie_from_file() -> String
-{
-	let mut file = File::open("cookie.txt").expect("Unable to open cookie.txt");
-	let mut contents = String::new();
-	file.read_to_string(&mut contents)
-		.expect("Unable to read cookie.txt");
-
-	contents.trim().to_string()
-}
-
 struct Handler;
 
 #[async_trait]
@@ -48,6 +25,7 @@ impl EventHandler for Handler
 				"numberinput" => commands::numberinput::run(&command.data.options),
 				"update-cookie" => commands::update_cookie::run(&command.data.options),
 				"update-authentication" => commands::update_authentication::run(&command.data.options),
+				"gpt" => commands::gpt::run(&command.data.options),
 				//"id" => commands::id::run(&command.data.options),
 				//"attachmentinput" => commands::attachmentinput::run(&command.data.options),
 				_ => "not implemented :(".to_string(),
@@ -88,17 +66,22 @@ impl EventHandler for Handler
 				//.create_application_command(|command| commands::attachmentinput::register(command))
 				.create_application_command(|command| commands::update_cookie::register(command))
 				.create_application_command(|command| commands::update_authentication::register(command))
+				.create_application_command(|command| commands::gpt::register(command))
 		})
 		.await;
 
-		println!("I now have the following guild slash commands: {:#?}", commands);
+		match commands
+		{
+			Ok(commands) =>
+			{
+				println!("Slash commands registered: {:#?}", commands);
+			}
+			Err(why) =>
+			{
+				println!("Cannot register slash commands: {}", why);
+			}
+		}
 
-		//let guild_command = Command::create_global_application_command(&ctx.http, |command| {
-		 //   commands::wonderful_command::register(command)
-		//})
-		//.await;
-
-		//println!("I created the following global slash command: {:#?}", guild_command);
 	}
 }
 
@@ -107,12 +90,6 @@ async fn main()
 {
 	// Configure the client with your Discord bot token in the environment.
 	let discord_token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
-
-	let auth_token = get_auth_from_file();
-	let cookie = get_cookie_from_file();
-
-	println!("Auth token: {}", auth_token);
-	println!("Cookie: {}", cookie);
 
 	// Build our client.
 	let mut client = Client::builder(discord_token, GatewayIntents::empty())
