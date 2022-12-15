@@ -52,14 +52,14 @@ fn build_body(prompt: &str) -> String
 		{
 			"action": "next",
 			"messages": [{
-				"id": "7c21185b-5d05-479e-8277-b10adb64e0e4",
+				"id": "7c21185b-5d05-479e-8277-b10adb64e0e1",
 				"role": "user",
 				"content": {
 					"content_type": "text",
 					"parts": [prompt]
 				}
 			}],
-			"parent_message_id": "6b9ed3ec-9e12-4294-a710-75acedae7546",
+			"parent_message_id": "6b9ed3ec-9e12-4294-a710-75acedae7552",
 			"model": "text-davinci-002-render"
 		}
 	);
@@ -125,9 +125,14 @@ pub async fn run(_options: &[CommandDataOption]) -> String
 		.await
 		.expect("Unable to send request");
 	
+	let was_success = response.status().is_success();
 	let response_body = response.text().await.expect("Unable to read response body");
 	println!("RESPONSE! {}", response_body);
 	println!("{}", response_body);
+	if !was_success
+	{
+		return response_body;
+	}
 	let data = get_penultimate_data(response_body);
 	match data
 	{
@@ -138,7 +143,7 @@ pub async fn run(_options: &[CommandDataOption]) -> String
 			let response = json["message"]["content"]["parts"][0].to_string();
 			response[1..response.len() - 1].to_string().replace("\\n","\n")
 		}
-		None => "No response".to_string(),
+		None => "Request failed. Probably too many requests".to_string(),
 	}
 }
 
